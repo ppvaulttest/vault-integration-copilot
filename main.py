@@ -16,7 +16,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 paypal_client_id = os.getenv("PAYPAL_CLIENT_ID")
 paypal_client_secret = os.getenv("PAYPAL_CLIENT_SECRET")
 
-# --- JSON Schema (simplified) ---
+# --- JSON Schema (simplified card vaulting) ---
 card_schema = {
     "type": "object",
     "properties": {
@@ -40,7 +40,7 @@ card_schema = {
     "required": ["payment_source"]
 }
 
-# --- Validator ---
+# --- Validate JSON against schema ---
 def validate_json(data):
     try:
         validate(instance=data, schema=card_schema)
@@ -48,7 +48,7 @@ def validate_json(data):
     except ValidationError as ve:
         return False, str(ve)
 
-# --- PayPal Sandbox Auth ---
+# --- Get access token from PayPal Sandbox ---
 def get_paypal_access_token():
     url = "https://api.sandbox.paypal.com/v1/oauth2/token"
     auth = (paypal_client_id, paypal_client_secret)
@@ -58,7 +58,7 @@ def get_paypal_access_token():
     response.raise_for_status()
     return response.json()["access_token"]
 
-# --- Vault API Call ---
+# --- Call PayPal Vault v3 API ---
 def send_to_paypal(json_data):
     token = get_paypal_access_token()
     url = "https://api.sandbox.paypal.com/v3/vault/payment-tokens"
@@ -69,26 +69,40 @@ def send_to_paypal(json_data):
     response = requests.post(url, headers=headers, json=json_data)
     return response.status_code, response.json()
 
-# --- App UI ---
+# --- UI + Prompt Flow ---
 user_prompt = st.text_area("Enter your instruction")
+
 if st.button("Generate & Validate"):
     if not user_prompt:
         st.warning("Please enter a prompt first.")
     else:
         try:
+            # AI prompt to generate pure JSON
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are an assistant that only returns valid JSON for the PayPal Vault v3 API request body. Do not include any explanation or text outside the JSON object."
+                },
+                {
+                    "role": "user",
+                    "content": f"Generate a PayPal Vault v3 payment token request to: {user_prompt}"
+                }
+            ]
             ai_response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": user_prompt}],
+                messages=messages,
                 temperature=0.2
             )
             ai_output = ai_response['choices'][0]['message']['content']
+
             st.subheader("AI-Generated JSON")
             st.code(ai_output, language='json')
 
-            # Try to parse JSON
+            # Try to parse and validate JSON
             try:
                 parsed_json = json.loads(ai_output)
                 is_valid, error_msg = validate_json(parsed_json)
+
                 if is_valid:
                     st.success("JSON is valid according to schema.")
                     st.subheader("Sending to PayPal Sandbox...")
@@ -99,17 +113,21 @@ if st.button("Generate & Validate"):
                     st.error("JSON Validation Failed:")
                     st.code(error_msg)
                     if st.button("Fix JSON with AI"):
-                        fix_prompt = f"The following JSON is invalid for PayPal Vault. Fix it:{ai_output}"
+                        fix_prompt = f"The following JSON is invalid for PayPal Vault. Fix it and only return fixed JSON:\n\n{ai_output}"
                         fixed = openai.ChatCompletion.create(
                             model="gpt-3.5-turbo",
-                            messages=[{"role": "user", "content": fix_prompt}],
+                            messages=[
+                                {"role": "system", "content": "Only return fixed JSON with no explanation."},
+                                {"role": "user", "content": fix_prompt}
+                            ],
                             temperature=0.2
                         )
                         fixed_json = fixed['choices'][0]['message']['content']
                         st.subheader("AI-Fixed JSON")
                         st.code(fixed_json, language='json')
+
             except json.JSONDecodeError:
-                st.error("AI output is not valid JSON.")
+                st.error("AI output is not valid JSON. Try rephrasing your prompt or click Fix JSON.")
 
         except Exception as e:
             st.error(f"Something went wrong: {e}")
