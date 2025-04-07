@@ -92,6 +92,8 @@ Instruction: "{instruction}"
                 st.code(fixed, language="json")
             else:
                 st.success("API Call Successful!")
+                st.subheader ("Sandbox API Response")
+                st.json(live_response) # Full JSON response from Sandbox for Vault Request 
 
         except Exception as e:
             st.warning("Something went wrong during processing.")
