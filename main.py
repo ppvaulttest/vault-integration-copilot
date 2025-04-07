@@ -29,7 +29,7 @@ Original instruction: "{original_instruction}"
     follow_up_response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": follow_up_prompt}],
-        temperature=0.3,
+        temperature=0.2,
     )
     return follow_up_response.choices[0].message.content
 
