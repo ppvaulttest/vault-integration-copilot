@@ -9,7 +9,7 @@ from jsonschema import validate, ValidationError
 st.set_page_config(page_title="Vault v3 Co-Pilot", layout="centered")
 st.title("Vault v3 Co-Pilot")
 st.subheader("Test Card Vaulting in PayPal Sandbox")
-st.markdown("Describe your goal (e.g. 'Vault a Visa card with CVV, expiry, and billing address').")
+st.markdown("Describe your goal (e.g. 'Vault a card with card number, expiry, and billing address').")
 
 # --- Load Secrets ---
 openai.api_key = os.getenv("OPENAI_API_KEY")
