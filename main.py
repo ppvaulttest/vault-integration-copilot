@@ -7,7 +7,7 @@ from validator import validate_json
 
 # Load .env for OpenAI API Key
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Page Title
 st.title("Vault v3 Co-Pilot")
@@ -92,7 +92,7 @@ Return:
 - JSON Body (using the format above)
 """
             # OpenAI Call
-            client = openai.OpenAI()
+            # client already initialized above
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
