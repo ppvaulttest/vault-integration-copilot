@@ -99,9 +99,7 @@ if st.button("Generate & Validate"):
                     st.error("JSON Validation Failed:")
                     st.code(error_msg)
                     if st.button("Fix JSON with AI"):
-                        fix_prompt = f"The following JSON is invalid for PayPal Vault. Fix it:
-
-{ai_output}"
+                        fix_prompt = f"The following JSON is invalid for PayPal Vault. Fix it:{ai_output}"
                         fixed = openai.ChatCompletion.create(
                             model="gpt-3.5-turbo",
                             messages=[{"role": "user", "content": fix_prompt}],
